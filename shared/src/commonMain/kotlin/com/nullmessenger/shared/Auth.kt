@@ -19,9 +19,9 @@ private const val SUPABASE_URL = "https://nlxozatdsstdfckzvmex.supabase.co"
 private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_tk88inicwpgppVVRlvGv9Q_WyNlAcqE"
 
 object NullAuth {
-    @Volatile var accessToken: String? = null
+    var accessToken: String? = null
         private set
-    @Volatile var refreshToken: String? = null
+    var refreshToken: String? = null
         private set
 
     private val client = HttpClient(CIO)

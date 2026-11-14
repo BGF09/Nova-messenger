@@ -39,6 +39,7 @@ fun NullMessengerApp() {
     var profileUsername by remember { mutableStateOf("null_user") }
     var profileBio by remember { mutableStateOf("В мессенджере NULL") }
     var usernameNotice by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     val chats = remember {
         listOf(
             DemoChat("Илья", "ilya_dev", "Привет! Как дела?", "И", 2),
@@ -65,12 +66,12 @@ fun NullMessengerApp() {
             )
             "chats" -> MessengerShell("Чаты", onTab = { screen = it }) {
                 Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
-                    SearchField()
+                    SearchField(searchQuery, onQueryChange = { searchQuery = it })
                     Spacer(Modifier.height(14.dp))
                     Text("НЕДАВНИЕ", color = Muted, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(chats) { chat ->
+                        items(chats.filter { it.name.contains(searchQuery, ignoreCase = true) || it.username.contains(searchQuery.removePrefix("@"), ignoreCase = true) }) { chat ->
                             ChatRow(chat) { selectedChat = chat; screen = "dialog" }
                         }
                     }
@@ -185,10 +186,9 @@ private fun NavItem(symbol: String, label: String, active: Boolean, onClick: () 
 }
 
 @Composable
-private fun SearchField() {
-    var query by remember { mutableStateOf("") }
+private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
-        value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
+        value = query, onValueChange = onQueryChange, modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Поиск чатов и людей", color = Muted) }, singleLine = true,
         shape = RoundedCornerShape(15.dp),
         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Mint, unfocusedBorderColor = Border, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Mint)

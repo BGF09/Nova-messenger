@@ -64,7 +64,7 @@ fun NullMessengerApp() {
                 otp = otp, onOtpChange = { otp = it.filter(Char::isDigit).take(8); notice = "" },
                 codeSent = codeSent, busy = authBusy, notice = notice,
                 onSendCode = {
-                    if (!email.matches(Regex("^[A-Za-z0-9._%+\\\\-]+@[A-Za-z0-9.\\\\-]+\\\\.[A-Za-z]{2,}$"))) {
+                    if (!email.matches(Regex("""^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"""))) {
                         notice = "Введи корректный адрес электронной почты."
                     } else authScope.launch {
                         authBusy = true

@@ -8,13 +8,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -31,9 +32,13 @@ private data class DemoChat(val name: String, val username: String, val preview:
 
 @Composable
 fun NullMessengerApp() {
-    var phone by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
+    var codeSent by remember { mutableStateOf(false) }
+    var authBusy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
-    var screen by remember { mutableStateOf("phone") }
+    var screen by remember { mutableStateOf("auth") }
+    val authScope = rememberCoroutineScope()
     var selectedChat by remember { mutableStateOf<DemoChat?>(null) }
     var profileName by remember { mutableStateOf("NULL User") }
     var profileUsername by remember { mutableStateOf("null_user") }
@@ -54,14 +59,30 @@ fun NullMessengerApp() {
         onBackground = White, onSurface = White, secondary = Muted
     )) {
         when (screen) {
-            "phone" -> PhoneScreen(
-                phone = phone,
-                onPhoneChange = { phone = it; notice = "" },
-                notice = notice,
-                onContinue = {
-                    notice = if (phone.filter(Char::isDigit).length < 7) "Проверь номер телефона."
-                    else "SMS пока не подключены. Это демонстрационный режим — реальный вход пока недоступен."
+            "auth" -> EmailAuthScreen(
+                email = email, onEmailChange = { email = it; notice = "" },
+                otp = otp, onOtpChange = { otp = it.filter(Char::isDigit).take(8); notice = "" },
+                codeSent = codeSent, busy = authBusy, notice = notice,
+                onSendCode = {
+                    if (!email.matches(Regex("^[A-Za-z0-9._%+\\\\-]+@[A-Za-z0-9.\\\\-]+\\\\.[A-Za-z]{2,}$"))) {
+                        notice = "Введи корректный адрес электронной почты."
+                    } else authScope.launch {
+                        authBusy = true
+                        try { NullAuth.sendEmailCode(email.trim()); codeSent = true; notice = "Код отправлен на ${email.trim()}. Проверь входящие и папку «Спам»." }
+                        catch (e: Exception) { notice = e.message ?: "Не удалось отправить письмо. Попробуй ещё раз." }
+                        finally { authBusy = false }
+                    }
                 },
+                onVerifyCode = {
+                    if (otp.length < 6) notice = "Введи код из письма."
+                    else authScope.launch {
+                        authBusy = true
+                        try { NullAuth.verifyEmailCode(email.trim(), otp); screen = "chats"; notice = "" }
+                        catch (e: Exception) { notice = e.message ?: "Код неверный или истёк. Запроси новый." }
+                        finally { authBusy = false }
+                    }
+                },
+                onBack = { codeSent = false; otp = ""; notice = "" },
                 onDemo = { screen = "chats" }
             )
             "chats" -> MessengerShell("Чаты", onTab = { screen = it }) {
@@ -102,11 +123,14 @@ fun NullMessengerApp() {
 }
 
 @Composable
-private fun PhoneScreen(phone: String, onPhoneChange: (String) -> Unit, notice: String, onContinue: () -> Unit, onDemo: () -> Unit) {
-    BoxWithConstraints(
-        Modifier.fillMaxSize().background(Ink).padding(20.dp),
-        contentAlignment = Alignment.Center
-    ) {
+private fun EmailAuthScreen(
+    email: String, onEmailChange: (String) -> Unit,
+    otp: String, onOtpChange: (String) -> Unit,
+    codeSent: Boolean, busy: Boolean, notice: String,
+    onSendCode: () -> Unit, onVerifyCode: () -> Unit,
+    onBack: () -> Unit, onDemo: () -> Unit
+) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Ink).padding(20.dp), contentAlignment = Alignment.Center) {
         val compact = maxWidth < 600.dp
         Column(
             Modifier.widthIn(max = 440.dp).fillMaxWidth()
@@ -115,33 +139,54 @@ private fun PhoneScreen(phone: String, onPhoneChange: (String) -> Unit, notice: 
         ) {
             Brand()
             Spacer(Modifier.height(32.dp))
-            Text("Твой номер телефона", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text(if (codeSent) "Проверь почту" else "Вход в NULL", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Text("Войди или создай аккаунт NULL Messenger. Номер понадобится для подтверждения входа.", color = Muted, fontSize = 14.sp, lineHeight = 21.sp)
-            Spacer(Modifier.height(22.dp))
-            Text("НОМЕР ТЕЛЕФОНА", color = Muted, fontSize = 10.sp, letterSpacing = 1.5.sp)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = phone, onValueChange = onPhoneChange, modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("+7 900 000-00-00", color = Muted) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Mint, unfocusedBorderColor = Border, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Mint)
+            Text(
+                if (codeSent) "Мы отправили одноразовый код на $email. Введи его ниже, чтобы подтвердить вход."
+                else "Войди или создай аккаунт NULL Messenger. Мы отправим код подтверждения на электронную почту.",
+                color = Muted, fontSize = 14.sp, lineHeight = 21.sp
             )
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Ink)) {
-                Text("Продолжить", fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(22.dp))
+            if (!codeSent) {
+                Text("ЭЛЕКТРОННАЯ ПОЧТА", color = Muted, fontSize = 10.sp, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = email, onValueChange = onEmailChange, modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("name@example.com", color = Muted) }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Mint, unfocusedBorderColor = Border, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Mint)
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onSendCode, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Ink)) {
+                    Text(if (busy) "Отправляем…" else "Получить код", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Text("КОД ИЗ ПИСЬМА", color = Muted, fontSize = 10.sp, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = otp, onValueChange = onOtpChange, modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("123456", color = Muted) }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Mint, unfocusedBorderColor = Border, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Mint)
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onVerifyCode, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Ink)) {
+                    Text(if (busy) "Проверяем…" else "Подтвердить и войти", fontWeight = FontWeight.Bold)
+                }
+                TextButton(onClick = onBack, enabled = !busy) { Text("Изменить почту", color = Muted) }
             }
             if (notice.isNotBlank()) {
                 Spacer(Modifier.height(10.dp))
-                Text(notice, color = Gold, fontSize = 12.sp, lineHeight = 18.sp)
+                Text(notice, color = if (notice.startsWith("Код отправлен")) Mint else Gold, fontSize = 12.sp, lineHeight = 18.sp)
             }
             Spacer(Modifier.height(18.dp))
             OutlinedButton(onClick = onDemo, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(15.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Border)) {
                 Text("Посмотреть приложение · демо", color = White, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(16.dp))
-            Text("Демо позволяет посмотреть интерфейс. Аккаунты, SMS и синхронизация пока не подключены.", color = Muted, fontSize = 11.sp, lineHeight = 17.sp)
+            Text("Вход подтверждается через Supabase Auth. Чаты пока работают в демонстрационном режиме.", color = Muted, fontSize = 11.sp, lineHeight = 17.sp)
         }
     }
 }

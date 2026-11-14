@@ -19,14 +19,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Ink = Color(0xFF090F0D)
-private val Panel = Color(0xFF121B18)
-private val Panel2 = Color(0xFF192520)
-private val Mint = Color(0xFF72E6B1)
-private val Muted = Color(0xFF91A49C)
-private val White = Color(0xFFEAF4EF)
-private val Border = Color(0xFF263630)
-private val Gold = Color(0xFFFFD477)
+private val Ink = Color(0xFF07110F)
+private val Panel = Color(0xFF10201B)
+private val Panel2 = Color(0xFF1B3028)
+private val Mint = Color(0xFFE4C477)
+private val Muted = Color(0xFFA6B8AE)
+private val White = Color(0xFFF7F4EC)
+private val Border = Color(0xFF31483D)
+private val Gold = Color(0xFFE9B8C7)
 
 private data class DemoChat(val name: String, val username: String, val preview: String, val avatar: String, val unread: Int = 0)
 
@@ -138,7 +138,20 @@ private fun EmailAuthScreen(
                 .padding(if (compact) 22.dp else 34.dp)
         ) {
             Brand()
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(20.dp))
+            Row(
+                Modifier.fillMaxWidth().background(Panel2, RoundedCornerShape(14.dp)).padding(horizontal = 13.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("❄", color = Mint, fontSize = 19.sp)
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("ЗИМНЕЕ ОБНОВЛЕНИЕ NULL", color = Mint, fontSize = 9.sp, letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold)
+                    Text("Тёплых разговоров этой зимой", color = White, fontSize = 11.sp)
+                }
+                Text("✦", color = Gold, fontSize = 18.sp)
+            }
+            Spacer(Modifier.height(24.dp))
             Text(if (codeSent) "Проверь почту" else "Вход в NULL", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text(
@@ -211,7 +224,10 @@ private fun MessengerShell(title: String, onTab: (String) -> Unit, content: @Com
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
             Brand()
             Spacer(Modifier.weight(1f))
-            Text(title.uppercase(), color = Muted, fontSize = 11.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(title.uppercase(), color = Muted, fontSize = 11.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                Text("❄ WINTER EDITION", color = Mint, fontSize = 8.sp, letterSpacing = 1.2.sp)
+            }
         }
         Box(Modifier.weight(1f)) { content() }
         Row(Modifier.fillMaxWidth().background(Panel).padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
